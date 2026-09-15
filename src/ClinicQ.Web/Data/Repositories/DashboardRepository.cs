@@ -59,8 +59,8 @@ public sealed class DashboardRepository : RepositoryBase, IDashboardRepository
         const string sql = """
             SELECT b.Id AS BranchId, b.Name AS BranchName,
                    COUNT(i.Id)                   AS InvoiceCount,
-                   COALESCE(SUM(i.Total), 0)      AS TotalInvoiced,
-                   COALESCE(SUM(i.AmountPaid), 0) AS TotalCollected
+                   COALESCE(SUM(i.Total), 0.0)      AS TotalInvoiced,
+                   COALESCE(SUM(i.AmountPaid), 0.0) AS TotalCollected
               FROM Branches b
               LEFT JOIN Invoices i ON i.BranchId = b.Id AND i.Status <> 'Void' AND i.IssuedAt >= @From AND i.IssuedAt < @To
              GROUP BY b.Id, b.Name

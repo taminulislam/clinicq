@@ -52,13 +52,22 @@ public sealed class DataSeeder
         _logger = logger;
     }
 
-    public async Task SeedAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Seeds reference data (branches, rules, fees, doctors, users, patients) when the database is empty and,
+    /// when <paramref name="includeDemoActivity"/> is true, a generated appointment/billing history.
+    /// </summary>
+    public async Task SeedAsync(bool includeDemoActivity = true, CancellationToken cancellationToken = default)
     {
         var branches = await _branches.GetAllAsync(cancellationToken);
         if (branches.Count == 0)
         {
             await SeedReferenceDataAsync(cancellationToken);
             branches = await _branches.GetAllAsync(cancellationToken);
+        }
+
+        if (!includeDemoActivity)
+        {
+            return;
         }
 
         var existing = await _appointments.ListAsync(new AppointmentFilter { Limit = 1 }, cancellationToken);
@@ -204,9 +213,15 @@ public sealed class DataSeeder
                     continue;
                 }
 
+                // Past days run at 55-85% of capacity; the future calendar thins out the further ahead it goes.
+                var fill = offset <= 0
+                    ? 0.55 + (_rng.NextDouble() * 0.30)
+                    : Math.Max(0.08, 0.65 - (offset * 0.045));
+
                 foreach (var doctor in doctors)
                 {
-                    var picks = slots.OrderBy(_ => _rng.Next()).Take(_rng.Next(2, 5)).OrderBy(s => s.Start);
+                    var take = Math.Max(1, (int)Math.Round(slots.Count * fill));
+                    var picks = slots.OrderBy(_ => _rng.Next()).Take(take).OrderBy(s => s.Start);
                     foreach (var slot in picks)
                     {
                         var patient = patients[_rng.Next(patients.Count)];

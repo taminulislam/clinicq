@@ -1,5 +1,6 @@
 -- ClinicQ - SQLite fallback schema (mirrors db/001_schema.sql for SQL Server).
 -- Executed at startup when ConnectionStrings:Default is empty. Idempotent.
+PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS Branches
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS Branches
     PostalCode     TEXT    NOT NULL,
     Phone          TEXT    NOT NULL,
     TimeZoneId     TEXT    NOT NULL DEFAULT 'Central Standard Time',
-    TaxRatePercent NUMERIC NOT NULL DEFAULT 0,
+    TaxRatePercent REAL    NOT NULL DEFAULT 0,
     IsActive       INTEGER NOT NULL DEFAULT 1
 );
 
@@ -90,7 +91,7 @@ CREATE TABLE IF NOT EXISTS FeeSchedule
     BranchId      INTEGER NOT NULL REFERENCES Branches(Id),
     ServiceCode   TEXT    NOT NULL,
     Description   TEXT    NOT NULL,
-    Amount        NUMERIC NOT NULL CHECK (Amount >= 0),
+    Amount        REAL    NOT NULL CHECK (Amount >= 0),
     IsActive      INTEGER NOT NULL DEFAULT 1,
     EffectiveFrom TEXT    NOT NULL,
     UNIQUE (BranchId, ServiceCode, EffectiveFrom)
@@ -104,13 +105,13 @@ CREATE TABLE IF NOT EXISTS Invoices
     PatientId       INTEGER NOT NULL REFERENCES Patients(Id),
     BranchId        INTEGER NOT NULL REFERENCES Branches(Id),
     Status          TEXT    NOT NULL CHECK (Status IN ('Draft','Issued','PartiallyPaid','Paid','Void')),
-    Subtotal        NUMERIC NOT NULL,
-    DiscountPercent NUMERIC NOT NULL DEFAULT 0,
-    DiscountAmount  NUMERIC NOT NULL DEFAULT 0,
-    TaxRatePercent  NUMERIC NOT NULL DEFAULT 0,
-    TaxAmount       NUMERIC NOT NULL DEFAULT 0,
-    Total           NUMERIC NOT NULL,
-    AmountPaid      NUMERIC NOT NULL DEFAULT 0,
+    Subtotal        REAL    NOT NULL,
+    DiscountPercent REAL    NOT NULL DEFAULT 0,
+    DiscountAmount  REAL    NOT NULL DEFAULT 0,
+    TaxRatePercent  REAL    NOT NULL DEFAULT 0,
+    TaxAmount       REAL    NOT NULL DEFAULT 0,
+    Total           REAL    NOT NULL,
+    AmountPaid      REAL    NOT NULL DEFAULT 0,
     IssuedAt        TEXT    NOT NULL,
     DueDate         TEXT    NOT NULL,
     PaidAt          TEXT    NULL
@@ -124,8 +125,8 @@ CREATE TABLE IF NOT EXISTS InvoiceLines
     ServiceCode TEXT    NOT NULL,
     Description TEXT    NOT NULL,
     Quantity    INTEGER NOT NULL CHECK (Quantity > 0),
-    UnitPrice   NUMERIC NOT NULL,
-    LineTotal   NUMERIC NOT NULL
+    UnitPrice   REAL    NOT NULL,
+    LineTotal   REAL    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS IX_InvoiceLines_Invoice ON InvoiceLines(InvoiceId);
 
@@ -133,7 +134,7 @@ CREATE TABLE IF NOT EXISTS Payments
 (
     Id         INTEGER PRIMARY KEY AUTOINCREMENT,
     InvoiceId  INTEGER NOT NULL REFERENCES Invoices(Id),
-    Amount     NUMERIC NOT NULL CHECK (Amount > 0),
+    Amount     REAL    NOT NULL CHECK (Amount > 0),
     Method     TEXT    NOT NULL CHECK (Method IN ('Cash','Card','Insurance','BankTransfer')),
     Reference  TEXT    NULL,
     PaidAt     TEXT    NOT NULL,
@@ -200,9 +201,9 @@ CREATE TABLE IF NOT EXISTS ReconciliationRuns
     PeriodStart                   TEXT    NOT NULL,
     PeriodEnd                     TEXT    NOT NULL,
     InvoiceCount                  INTEGER NOT NULL,
-    TotalInvoiced                 NUMERIC NOT NULL,
-    TotalPaid                     NUMERIC NOT NULL,
-    Outstanding                   NUMERIC NOT NULL,
+    TotalInvoiced                 REAL    NOT NULL,
+    TotalPaid                     REAL    NOT NULL,
+    Outstanding                   REAL    NOT NULL,
     UnbilledCompletedAppointments INTEGER NOT NULL,
     Notes                         TEXT    NOT NULL DEFAULT ''
 );

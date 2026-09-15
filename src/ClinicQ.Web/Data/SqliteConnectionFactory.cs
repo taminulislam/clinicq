@@ -34,7 +34,8 @@ public sealed class SqliteConnectionFactory : IDbConnectionFactory, IDisposable
 
         await using (var pragma = connection.CreateCommand())
         {
-            pragma.CommandText = "PRAGMA foreign_keys = ON;";
+            // synchronous=NORMAL is safe with WAL and keeps per-statement commits cheap.
+            pragma.CommandText = "PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;";
             await pragma.ExecuteNonQueryAsync(cancellationToken);
         }
 

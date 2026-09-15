@@ -16,8 +16,8 @@ public sealed class SqliteBillingReconciliationRepository : RepositoryBase, IBil
     {
         const string totalsSql = """
             SELECT COUNT(*)                 AS InvoiceCount,
-                   COALESCE(SUM(Total), 0)      AS TotalInvoiced,
-                   COALESCE(SUM(AmountPaid), 0) AS TotalPaid
+                   COALESCE(SUM(Total), 0.0)      AS TotalInvoiced,
+                   COALESCE(SUM(AmountPaid), 0.0) AS TotalPaid
               FROM Invoices
              WHERE BranchId = @BranchId
                AND Status <> 'Void'
