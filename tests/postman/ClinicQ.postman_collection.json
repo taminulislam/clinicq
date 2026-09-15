@@ -1,0 +1,522 @@
+{
+  "info": {
+    "_postman_id": "0b3f7c02-6d1a-4f2e-9a16-2c2b5f7a1e10",
+    "name": "ClinicQ API v1",
+    "description": "Smoke tests for the ClinicQ REST API. Set baseUrl, username and password as collection or environment variables; the token request stores the bearer token for the remaining requests.\n\nRun locally:\n  newman run tests/postman/ClinicQ.postman_collection.json --env-var baseUrl=http://localhost:5184 --env-var username=admin --env-var password='Passw0rd!'",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5184" },
+    { "key": "username", "value": "admin" },
+    { "key": "password", "value": "Passw0rd!" },
+    { "key": "token", "value": "" },
+    { "key": "branchId", "value": "" },
+    { "key": "doctorId", "value": "" },
+    { "key": "patientId", "value": "" },
+    { "key": "appointmentId", "value": "" },
+    { "key": "slotStart", "value": "" },
+    { "key": "invoiceId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+        "auth": { "type": "noauth" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('reports healthy', function () { pm.expect(pm.response.text()).to.eql('Healthy'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rejects anonymous access",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/patients", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients"] },
+        "auth": { "type": "noauth" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('returns 401', function () { pm.response.to.have.status(401); });"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue token",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/token", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "token"] },
+        "auth": { "type": "noauth" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var body = pm.response.json();",
+              "pm.test('returns a bearer token', function () {",
+              "  pm.expect(body.tokenType).to.eql('Bearer');",
+              "  pm.expect(body.accessToken.split('.')).to.have.lengthOf(3);",
+              "});",
+              "pm.collectionVariables.set('token', body.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rejects a bad password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"definitely-wrong\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/auth/token", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "token"] },
+        "auth": { "type": "noauth" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('returns 401', function () { pm.response.to.have.status(401); });"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List branches",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/branches", "host": ["{{baseUrl}}"], "path": ["api", "v1", "branches"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var branches = pm.response.json();",
+              "pm.test('seeded branches are present', function () { pm.expect(branches.length).to.be.above(0); });",
+              "pm.collectionVariables.set('branchId', branches[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List doctors at the branch",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/doctors?branchId={{branchId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "doctors"],
+          "query": [{ "key": "branchId", "value": "{{branchId}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var doctors = pm.response.json();",
+              "pm.test('branch has doctors', function () { pm.expect(doctors.length).to.be.above(0); });",
+              "pm.collectionVariables.set('doctorId', doctors[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Find an available slot",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/branches/{{branchId}}/slots?doctorId={{doctorId}}&date={{slotDate}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "branches", "{{branchId}}", "slots"],
+          "query": [
+            { "key": "doctorId", "value": "{{doctorId}}" },
+            { "key": "date", "value": "{{slotDate}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Pick the next weekday so the branch is open.",
+              "var date = new Date();",
+              "date.setDate(date.getDate() + 1);",
+              "while (date.getDay() === 0 || date.getDay() === 6) { date.setDate(date.getDate() + 1); }",
+              "pm.collectionVariables.set('slotDate', date.toISOString().slice(0, 10));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var slots = pm.response.json().filter(function (s) { return s.isAvailable; });",
+              "pm.test('a slot is bookable', function () { pm.expect(slots.length).to.be.above(0); });",
+              "if (slots.length) { pm.collectionVariables.set('slotStart', slots[0].start); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create patient",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Newman\",\n  \"lastName\": \"Smoke\",\n  \"dateOfBirth\": \"1985-06-15T00:00:00\",\n  \"gender\": \"Other\",\n  \"email\": \"newman.smoke@example.com\",\n  \"phone\": \"(217) 555-0150\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/patients", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 201', function () { pm.response.to.have.status(201); });",
+              "var patient = pm.response.json();",
+              "pm.test('assigns an MRN', function () { pm.expect(patient.mrn).to.match(/^MRN-/); });",
+              "pm.collectionVariables.set('patientId', patient.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject an invalid patient",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"\",\n  \"email\": \"not-an-email\"\n}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/patients", "host": ["{{baseUrl}}"], "path": ["api", "v1", "patients"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('reports validation errors', function () { pm.expect(pm.response.json().errors).to.be.an('object'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Book appointment",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"patientId\": {{patientId}},\n  \"doctorId\": {{doctorId}},\n  \"branchId\": {{branchId}},\n  \"start\": \"{{slotStart}}\",\n  \"reason\": \"Newman smoke test\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/appointments", "host": ["{{baseUrl}}"], "path": ["api", "v1", "appointments"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 201', function () { pm.response.to.have.status(201); });",
+              "var appointment = pm.response.json();",
+              "pm.test('starts as Requested', function () { pm.expect(appointment.status).to.eql('Requested'); });",
+              "pm.collectionVariables.set('appointmentId', appointment.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject an illegal transition",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/appointments/{{appointmentId}}/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "appointments", "{{appointmentId}}", "start"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 409', function () { pm.response.to.have.status(409); });",
+              "pm.test('explains the invalid move', function () { pm.expect(pm.response.json().title).to.eql('Invalid appointment transition'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Confirm appointment",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/appointments/{{appointmentId}}/confirm",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "appointments", "{{appointmentId}}", "confirm"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('is Confirmed', function () { pm.expect(pm.response.json().status).to.eql('Confirmed'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Check in",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/appointments/{{appointmentId}}/check-in",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "appointments", "{{appointmentId}}", "check-in"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('is CheckedIn', function () { pm.expect(pm.response.json().status).to.eql('CheckedIn'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Start consultation",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/appointments/{{appointmentId}}/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "appointments", "{{appointmentId}}", "start"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('is InConsultation', function () { pm.expect(pm.response.json().status).to.eql('InConsultation'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Complete visit",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Completed by the Newman smoke test.\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/appointments/{{appointmentId}}/complete",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "appointments", "{{appointmentId}}", "complete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var appointment = pm.response.json();",
+              "pm.test('is Completed', function () { pm.expect(appointment.status).to.eql('Completed'); });",
+              "pm.test('has no further transitions', function () { pm.expect(appointment.allowedTransitions).to.be.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Generate invoice",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"appointmentId\": {{appointmentId}},\n  \"services\": [\n    { \"serviceCode\": \"CONSULT\", \"quantity\": 1 }\n  ]\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/v1/invoices", "host": ["{{baseUrl}}"], "path": ["api", "v1", "invoices"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 201', function () { pm.response.to.have.status(201); });",
+              "var invoice = pm.response.json();",
+              "pm.test('is issued with a positive total', function () {",
+              "  pm.expect(invoice.status).to.eql('Issued');",
+              "  pm.expect(invoice.total).to.be.above(0);",
+              "});",
+              "pm.collectionVariables.set('invoiceId', invoice.id);",
+              "pm.collectionVariables.set('invoiceTotal', invoice.total);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Record payment",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": {{invoiceTotal}},\n  \"method\": \"Card\",\n  \"reference\": \"NEWMAN-RCPT\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/invoices/{{invoiceId}}/payments",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "invoices", "{{invoiceId}}", "payments"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var invoice = pm.response.json();",
+              "pm.test('is settled', function () {",
+              "  pm.expect(invoice.status).to.eql('Paid');",
+              "  pm.expect(invoice.balance).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Download invoice PDF",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/invoices/{{invoiceId}}/pdf",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "invoices", "{{invoiceId}}", "pdf"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('is a PDF', function () { pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard metrics",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/v1/dashboard/metrics", "host": ["{{baseUrl}}"], "path": ["api", "v1", "dashboard", "metrics"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "var metrics = pm.response.json();",
+              "pm.test('includes utilization and revenue', function () {",
+              "  pm.expect(metrics.doctorUtilization).to.be.an('array');",
+              "  pm.expect(metrics.revenue).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Run billing reconciliation",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": { "raw": "{{baseUrl}}/api/v1/billing/reconcile", "host": ["{{baseUrl}}"], "path": ["api", "v1", "billing", "reconcile"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('reconciles every branch', function () { pm.expect(pm.response.json().length).to.be.above(0); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

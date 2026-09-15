@@ -1,0 +1,240 @@
+# ClinicQ - multi-stage CI/CD
+# Build -> Test (unit + Newman API smoke) -> Deploy Dev -> Deploy Prod (staging slot + swap)
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - docs/*
+      - README.md
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetVersion: '8.0.x'
+  webProject: 'src/ClinicQ.Web/ClinicQ.Web.csproj'
+  testProject: 'tests/ClinicQ.Tests/ClinicQ.Tests.csproj'
+  appNamePrefix: 'clinicq'
+  azureSubscription: 'ClinicQ-ServiceConnection'
+
+stages:
+  - stage: Build
+    displayName: Build and package
+    jobs:
+      - job: Build
+        displayName: Restore, build, publish
+        pool:
+          vmImage: 'windows-latest'
+        steps:
+          - task: UseDotNet@2
+            displayName: Install .NET SDK
+            inputs:
+              packageType: 'sdk'
+              version: $(dotnetVersion)
+
+          - task: DotNetCoreCLI@2
+            displayName: Restore
+            inputs:
+              command: 'restore'
+              projects: 'ClinicQ.sln'
+              feedsToUse: 'select'
+
+          - task: DotNetCoreCLI@2
+            displayName: Build
+            inputs:
+              command: 'build'
+              projects: 'ClinicQ.sln'
+              arguments: '--configuration $(buildConfiguration) --no-restore'
+
+          - task: DotNetCoreCLI@2
+            displayName: Publish web app
+            inputs:
+              command: 'publish'
+              publishWebProjects: false
+              projects: '$(webProject)'
+              arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)/web'
+              zipAfterPublish: true
+
+          - task: CopyFiles@2
+            displayName: Stage database scripts and infrastructure
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)'
+              Contents: |
+                db/**
+                infra/**
+                tests/postman/**
+              TargetFolder: '$(Build.ArtifactStagingDirectory)/ops'
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish build artifacts
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+  - stage: Test
+    displayName: Automated tests
+    dependsOn: Build
+    jobs:
+      - job: UnitTests
+        displayName: Unit and integration tests
+        pool:
+          vmImage: 'windows-latest'
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              packageType: 'sdk'
+              version: $(dotnetVersion)
+
+          - task: DotNetCoreCLI@2
+            displayName: Test with coverage
+            inputs:
+              command: 'test'
+              projects: '$(testProject)'
+              arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage" --logger trx --results-directory $(Agent.TempDirectory)/TestResults'
+              publishTestResults: true
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publish coverage
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+
+      - job: ApiSmoke
+        displayName: Newman API collection
+        dependsOn: UnitTests
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UseDotNet@2
+            inputs:
+              packageType: 'sdk'
+              version: $(dotnetVersion)
+
+          - task: NodeTool@0
+            displayName: Install Node
+            inputs:
+              versionSpec: '20.x'
+
+          - script: npm install --global newman newman-reporter-junitfull
+            displayName: Install Newman
+
+          # Runs against the SQLite fallback, so no database is needed on the agent.
+          - script: |
+              dotnet run --project $(webProject) --configuration $(buildConfiguration) --urls http://localhost:5080 &
+              for i in $(seq 1 30); do
+                curl -sf http://localhost:5080/health && break
+                sleep 2
+              done
+            displayName: Start API in the background
+
+          - script: |
+              newman run tests/postman/ClinicQ.postman_collection.json \
+                --env-var baseUrl=http://localhost:5080 \
+                --env-var username=admin \
+                --env-var password='Passw0rd!' \
+                --reporters cli,junitfull \
+                --reporter-junitfull-export $(Agent.TempDirectory)/newman-results.xml
+            displayName: Run Newman collection
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '$(Agent.TempDirectory)/newman-results.xml'
+              testRunTitle: 'ClinicQ API (Newman)'
+
+  - stage: DeployDev
+    displayName: Deploy to Dev
+    dependsOn: Test
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployDev
+        displayName: Dev web app
+        environment: 'dev'
+        pool:
+          vmImage: 'windows-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+
+                - task: AzureWebApp@1
+                  displayName: Deploy to Dev slot
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    appType: 'webApp'
+                    appName: '$(appNamePrefix)-dev-web'
+                    package: '$(Pipeline.Workspace)/drop/web/*.zip'
+                    deploymentMethod: 'auto'
+
+                - task: AzureCLI@2
+                  displayName: Apply database scripts (Dev)
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    scriptType: 'pscore'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      # Connection details come from the pipeline library group backed by Key Vault.
+                      foreach ($script in @('001_schema.sql', '002_seed.sql', '003_procs.sql')) {
+                        Invoke-Sqlcmd -ServerInstance $env:SQL_SERVER -Database $env:SQL_DATABASE `
+                          -AccessToken (az account get-access-token --resource https://database.windows.net --query accessToken -o tsv) `
+                          -InputFile "$(Pipeline.Workspace)/drop/ops/db/$script"
+                      }
+
+  - stage: DeployProd
+    displayName: Deploy to Production
+    dependsOn: DeployDev
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployProd
+        displayName: Production slot swap
+        environment: 'prod'
+        pool:
+          vmImage: 'windows-latest'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+
+                - task: AzureWebApp@1
+                  displayName: Deploy to staging slot
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    appType: 'webApp'
+                    appName: '$(appNamePrefix)-prod-web'
+                    deployToSlotOrASE: true
+                    resourceGroupName: '$(appNamePrefix)-prod-rg'
+                    slotName: 'staging'
+                    package: '$(Pipeline.Workspace)/drop/web/*.zip'
+
+                - task: AzureCLI@2
+                  displayName: Smoke test the staging slot
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    scriptType: 'pscore'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      $url = "https://$(appNamePrefix)-prod-web-staging.azurewebsites.net/health"
+                      $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+                      if ($response.StatusCode -ne 200) { throw "Staging health check failed: $($response.StatusCode)" }
+                      Write-Host "Staging slot healthy."
+
+                - task: AzureAppServiceManage@0
+                  displayName: Swap staging into production
+                  inputs:
+                    azureSubscription: $(azureSubscription)
+                    action: 'Swap Slots'
+                    webAppName: '$(appNamePrefix)-prod-web'
+                    resourceGroupName: '$(appNamePrefix)-prod-rg'
+                    sourceSlot: 'staging'
+                    swapWithProduction: true
