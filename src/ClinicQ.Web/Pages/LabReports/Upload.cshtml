@@ -1,0 +1,51 @@
+@page
+@model ClinicQ.Web.Pages.LabReports.UploadModel
+@{
+    ViewData["Title"] = "Upload lab report";
+}
+
+<h1 class="h3 mb-3">Upload lab report</h1>
+
+<form method="post" enctype="multipart/form-data" class="card" style="max-width: 48rem;">
+    <div class="card-body">
+        <div asp-validation-summary="All" class="alert alert-danger py-2"></div>
+        <input type="hidden" asp-for="Input.AppointmentId" />
+        <div class="mb-3">
+            <label asp-for="Input.PatientId" class="form-label">Patient</label>
+            <select asp-for="Input.PatientId" class="form-select">
+                <option value="0">Select a patient...</option>
+                @foreach (var p in Model.Patients)
+                {
+                    <option value="@p.Id">@p.LastName, @p.FirstName (@p.Mrn)</option>
+                }
+            </select>
+            <span asp-validation-for="Input.PatientId"></span>
+            @if (Model.Input.AppointmentId.HasValue)
+            {
+                <div class="form-text">Will be attached to visit #@Model.Input.AppointmentId.</div>
+            }
+        </div>
+        <div class="mb-3">
+            <label asp-for="Input.TestName" class="form-label"></label>
+            <input asp-for="Input.TestName" class="form-control" placeholder="e.g. Complete blood count" />
+            <span asp-validation-for="Input.TestName"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Input.Notes" class="form-label"></label>
+            <textarea asp-for="Input.Notes" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-1">
+            <label asp-for="Input.File" class="form-label">File (PDF, PNG or JPEG, max 10 MB)</label>
+            <input asp-for="Input.File" type="file" class="form-control" accept="application/pdf,image/png,image/jpeg" />
+            <span asp-validation-for="Input.File"></span>
+        </div>
+    </div>
+    <div class="card-footer bg-white d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Upload</button>
+        <a asp-page="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

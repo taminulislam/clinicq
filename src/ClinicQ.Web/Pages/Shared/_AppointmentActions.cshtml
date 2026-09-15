@@ -1,0 +1,56 @@
+@model ClinicQ.Web.Ui.AppointmentActionsModel
+@*
+    Renders one button per legal next state for an appointment (from the domain state machine).
+    Cancellation needs a reason, so it is only offered where ShowCancel is true (details page).
+*@
+@{
+    var next = AppointmentStateMachine.NextStates(Model.Status)
+        .Where(s => s != AppointmentStatus.Cancelled || Model.ShowCancel)
+        .OrderBy(s => (int)s)
+        .ToList();
+}
+@if (next.Count == 0)
+{
+    <span class="text-muted small">No further actions</span>
+}
+else
+{
+    <div class="d-inline-flex flex-wrap gap-1">
+        @foreach (var target in next)
+        {
+            var (label, css) = target switch
+            {
+                AppointmentStatus.Confirmed => ("Confirm", "btn-outline-primary"),
+                AppointmentStatus.CheckedIn => ("Check in", "btn-outline-info"),
+                AppointmentStatus.InConsultation => ("Start consult", "btn-outline-warning"),
+                AppointmentStatus.Completed => ("Complete", "btn-outline-success"),
+                AppointmentStatus.NoShow => ("No-show", "btn-outline-danger"),
+                _ => ("Cancel", "btn-outline-dark")
+            };
+            if (target == AppointmentStatus.Cancelled)
+            {
+                <button type="button" class="btn btn-sm @css" data-bs-toggle="collapse" data-bs-target="#cancel-@Model.Id">@label</button>
+            }
+            else
+            {
+                <form method="post" asp-page="/Appointments/Details" asp-page-handler="Transition" asp-route-id="@Model.Id" class="d-inline">
+                    <input type="hidden" name="target" value="@target" />
+                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                    <button type="submit" class="btn btn-sm @css">@label</button>
+                </form>
+            }
+        }
+    </div>
+    @if (Model.ShowCancel && next.Contains(AppointmentStatus.Cancelled))
+    {
+        <form method="post" asp-page="/Appointments/Details" asp-page-handler="Transition" asp-route-id="@Model.Id"
+              class="collapse mt-2" id="cancel-@Model.Id" data-confirm="Cancel this appointment?">
+            <input type="hidden" name="target" value="@AppointmentStatus.Cancelled" />
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div class="input-group input-group-sm">
+                <input type="text" name="text" class="form-control" placeholder="Cancellation reason" required minlength="3" maxlength="300" />
+                <button type="submit" class="btn btn-dark">Confirm cancellation</button>
+            </div>
+        </form>
+    }
+}

@@ -1,0 +1,33 @@
+@page "{id:int}"
+@model ClinicQ.Web.Pages.Prescriptions.DetailsModel
+@{
+    var rx = Model.Prescription;
+    ViewData["Title"] = $"Prescription #{rx.Id}";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+    <div>
+        <h1 class="h3 mb-1">Prescription #@rx.Id</h1>
+        <div class="text-muted">
+            <a asp-page="/Patients/Details" asp-route-id="@Model.Patient.Id">@Model.Patient.FullName</a> &middot; @Model.Doctor.FullName &middot;
+            issued @rx.IssuedAt.ToString("d MMM yyyy HH:mm") &middot; <a asp-page="/Appointments/Details" asp-route-id="@rx.AppointmentId">visit #@rx.AppointmentId</a>
+        </div>
+    </div>
+    <a asp-page-handler="Pdf" asp-route-id="@rx.Id" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+</div>
+
+<div class="card" style="max-width: 60rem;">
+    <div class="card-body">
+        <p><strong>Diagnosis:</strong> @(rx.Diagnosis ?? "-")</p>
+        <table class="table">
+            <thead><tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Days</th><th>Notes</th></tr></thead>
+            <tbody>
+                @foreach (var i in rx.Items)
+                {
+                    <tr><td>@i.Medication</td><td>@i.Dosage</td><td>@i.Frequency</td><td>@i.DurationDays</td><td>@i.Notes</td></tr>
+                }
+            </tbody>
+        </table>
+        <p class="mb-0"><strong>Instructions:</strong> @(rx.Instructions ?? "-")</p>
+    </div>
+</div>

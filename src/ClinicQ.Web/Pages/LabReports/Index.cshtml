@@ -1,0 +1,38 @@
+@page
+@model ClinicQ.Web.Pages.LabReports.IndexModel
+@{
+    ViewData["Title"] = "Lab reports";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-0">Lab reports</h1>
+        <div class="text-muted small">Storage provider: @Model.StorageProvider</div>
+    </div>
+    <a asp-page="Upload" class="btn btn-primary"><i class="bi bi-upload"></i> Upload report</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover js-datatable" data-order='[[0,"desc"]]'>
+            <thead>
+                <tr><th>Uploaded</th><th>Patient</th><th>Test</th><th>File</th><th class="text-end">Size</th><th>By</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Reports)
+                {
+                    var patient = Model.PatientsById.GetValueOrDefault(r.PatientId);
+                    <tr>
+                        <td data-order="@r.UploadedAt.ToString("s")">@r.UploadedAt.ToString("d MMM yyyy HH:mm")</td>
+                        <td><a asp-page="/Patients/Details" asp-route-id="@r.PatientId">@(patient?.FullName ?? $"#{r.PatientId}")</a></td>
+                        <td>@r.TestName</td>
+                        <td>@r.FileName</td>
+                        <td class="text-end" data-order="@r.SizeBytes">@((r.SizeBytes / 1024.0).ToString("0.#")) KB</td>
+                        <td>@r.UploadedBy</td>
+                        <td class="text-end"><a asp-page-handler="Download" asp-route-id="@r.Id" class="btn btn-sm btn-outline-secondary">Download</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

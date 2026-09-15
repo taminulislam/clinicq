@@ -1,0 +1,46 @@
+@page
+@model ClinicQ.Web.Pages.Invoices.CreateModel
+@{
+    ViewData["Title"] = "Generate invoice";
+}
+
+<h1 class="h3 mb-1">Generate invoice</h1>
+<p class="text-muted">
+    <a asp-page="/Appointments/Details" asp-route-id="@Model.Appointment.Id">Visit #@Model.Appointment.Id</a> -
+    @Model.Patient.FullName at @Model.Branch.Name on @Model.Appointment.ScheduledStart.ToString("d MMM yyyy")
+</p>
+
+<form method="post" asp-route-appointmentId="@Model.Appointment.Id" class="card" style="max-width: 56rem;">
+    <div class="card-body">
+        <div asp-validation-summary="All" class="alert alert-danger py-2"></div>
+        <table class="table align-middle">
+            <thead><tr><th>Code</th><th>Service</th><th class="text-end">Fee</th><th style="width: 7rem;">Qty</th></tr></thead>
+            <tbody>
+                @foreach (var f in Model.Fees)
+                {
+                    <tr>
+                        <td>@f.ServiceCode</td>
+                        <td>@f.Description</td>
+                        <td class="text-end">@f.Amount.ToString("C2")</td>
+                        <td><input type="number" min="0" max="50" class="form-control form-control-sm" name="Quantities[@f.ServiceCode]" value="@(Model.Quantities.GetValueOrDefault(f.ServiceCode))" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="DiscountOverride" class="form-label">Discount override (%)</label>
+                <input asp-for="DiscountOverride" class="form-control" step="0.5" min="0" max="100" placeholder="Policy: @Model.PolicyDiscount.ToString("0.##")%" />
+                <div class="form-text">Leave empty to apply the age-based policy (@Model.PolicyDiscount.ToString("0.##")% for this patient).</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Branch tax rate</label>
+                <input class="form-control" value="@Model.Branch.TaxRatePercent.ToString("0.##")%" readonly />
+            </div>
+        </div>
+    </div>
+    <div class="card-footer bg-white d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Issue invoice</button>
+        <a asp-page="/Appointments/Details" asp-route-id="@Model.Appointment.Id" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>

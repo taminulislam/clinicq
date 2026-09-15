@@ -1,0 +1,23 @@
+@page "{id:int}"
+@model ClinicQ.Web.Pages.Patients.EditModel
+@{
+    ViewData["Title"] = $"Edit {Model.Patient.FullName}";
+}
+
+<h1 class="h3 mb-1">Edit patient</h1>
+<p class="text-muted">@Model.Patient.FullName - @Model.Patient.Mrn</p>
+
+<form method="post" class="card" style="max-width: 60rem;">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+        <partial name="_PatientForm" for="Input" />
+    </div>
+    <div class="card-footer bg-white d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-page="Details" asp-route-id="@Model.Patient.Id" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

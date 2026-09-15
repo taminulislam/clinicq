@@ -1,0 +1,141 @@
+@page "{id:int}"
+@model ClinicQ.Web.Pages.Appointments.DetailsModel
+@{
+    var a = Model.Appointment;
+    ViewData["Title"] = $"Appointment #{a.Id}";
+    var self = $"/Appointments/Details/{a.Id}";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+    <div>
+        <h1 class="h3 mb-1">Appointment #@a.Id <span class="badge @Badges.For(a.Status) align-middle fs-6">@Badges.Label(a.Status)</span></h1>
+        <div class="text-muted">@a.ScheduledStart.ToString("dddd d MMMM yyyy, HH:mm") - @a.ScheduledEnd.ToString("HH:mm") at @Model.Branch.Name</div>
+    </div>
+    <div class="d-flex gap-2">
+        @if (!AppointmentStateMachine.IsTerminal(a.Status))
+        {
+            <a asp-page="Edit" asp-route-id="@a.Id" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+        }
+        <a asp-page="Index" class="btn btn-outline-secondary">Back to list</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold">Next step</div>
+            <div class="card-body">
+                <partial name="_AppointmentActions" model="new AppointmentActionsModel(a.Id, a.Status, self, ShowCancel: true)" />
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold">Visit</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Patient</dt>
+                    <dd class="col-sm-9"><a asp-page="/Patients/Details" asp-route-id="@Model.Patient.Id">@Model.Patient.FullName</a> (@Model.Patient.Mrn)
+                        @if (!string.IsNullOrWhiteSpace(Model.Patient.Allergies))
+                        {
+                            <span class="badge text-bg-danger ms-1">Allergies: @Model.Patient.Allergies</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-3">Doctor</dt>
+                    <dd class="col-sm-9">@Model.Doctor.FullName, @Model.Doctor.Specialty</dd>
+                    <dt class="col-sm-3">Reason</dt>
+                    <dd class="col-sm-9">@a.Reason</dd>
+                    <dt class="col-sm-3">Notes</dt>
+                    <dd class="col-sm-9">@(a.Notes ?? "-")</dd>
+                    @if (a.Status is AppointmentStatus.Cancelled)
+                    {
+                        <dt class="col-sm-3">Cancellation</dt>
+                        <dd class="col-sm-9">@a.CancellationReason</dd>
+                    }
+                    @if (a.WaitMinutes.HasValue)
+                    {
+                        <dt class="col-sm-3">Wait time</dt>
+                        <dd class="col-sm-9">@Math.Round(a.WaitMinutes.Value) minutes from check-in to consultation</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Prescriptions</span>
+                @if (Model.CanPrescribe)
+                {
+                    <a asp-page="/Prescriptions/Create" asp-route-appointmentId="@a.Id" class="btn btn-sm btn-primary">Write prescription</a>
+                }
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var p in Model.Prescriptions)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>Rx #@p.Id - @string.Join(", ", p.Items.Select(i => $"{i.Medication} {i.Dosage}"))</span>
+                        <a asp-page="/Prescriptions/Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Open</a>
+                    </li>
+                }
+                @if (Model.Prescriptions.Count == 0)
+                {
+                    <li class="list-group-item text-muted">None issued.</li>
+                }
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Lab reports</span>
+                <a asp-page="/LabReports/Upload" asp-route-patientId="@a.PatientId" asp-route-appointmentId="@a.Id" class="btn btn-sm btn-outline-primary">Upload</a>
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var r in Model.LabReports)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>@r.TestName <span class="text-muted small">@r.FileName</span></span>
+                        <a asp-page="/LabReports/Index" asp-page-handler="Download" asp-route-id="@r.Id" class="btn btn-sm btn-outline-secondary">Download</a>
+                    </li>
+                }
+                @if (Model.LabReports.Count == 0)
+                {
+                    <li class="list-group-item text-muted">No reports attached to this visit.</li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-white fw-semibold">Billing</div>
+            <div class="card-body">
+                @if (Model.Invoice is not null)
+                {
+                    <p class="mb-2"><a asp-page="/Invoices/Details" asp-route-id="@Model.Invoice.Id">@Model.Invoice.InvoiceNumber</a>
+                        <span class="badge @Badges.For(Model.Invoice.Status)">@Badges.Label(Model.Invoice.Status)</span></p>
+                    <p class="mb-0">Total @Model.Invoice.Total.ToString("C2"), balance @Model.Invoice.Balance.ToString("C2")</p>
+                }
+                else if (Model.CanInvoice)
+                {
+                    <p class="text-muted">Visit completed and not yet billed.</p>
+                    <a asp-page="/Invoices/Create" asp-route-appointmentId="@a.Id" class="btn btn-primary">Generate invoice</a>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">An invoice can be generated once the visit is completed.</p>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">Timeline</div>
+            <ul class="list-group list-group-flush small">
+                <li class="list-group-item">Requested <span class="float-end">@a.CreatedAt.ToString("d MMM HH:mm")</span></li>
+                @if (a.ConfirmedAt.HasValue) { <li class="list-group-item">Confirmed <span class="float-end">@a.ConfirmedAt.Value.ToString("d MMM HH:mm")</span></li> }
+                @if (a.CheckedInAt.HasValue) { <li class="list-group-item">Checked in <span class="float-end">@a.CheckedInAt.Value.ToString("d MMM HH:mm")</span></li> }
+                @if (a.ConsultationStartedAt.HasValue) { <li class="list-group-item">Consultation started <span class="float-end">@a.ConsultationStartedAt.Value.ToString("d MMM HH:mm")</span></li> }
+                @if (a.CompletedAt.HasValue) { <li class="list-group-item">Completed <span class="float-end">@a.CompletedAt.Value.ToString("d MMM HH:mm")</span></li> }
+                @if (a.CancelledAt.HasValue) { <li class="list-group-item">@(a.Status == AppointmentStatus.NoShow ? "Marked no-show" : "Cancelled") <span class="float-end">@a.CancelledAt.Value.ToString("d MMM HH:mm")</span></li> }
+            </ul>
+        </div>
+    </div>
+</div>

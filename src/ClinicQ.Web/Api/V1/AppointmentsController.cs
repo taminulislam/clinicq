@@ -53,7 +53,7 @@ public sealed class AppointmentsController : ApiControllerBase
         var appointment = await _service.RequestAsync(
             new AppointmentRequest(request.PatientId, request.DoctorId, request.BranchId, request.Start, request.Reason, request.Notes),
             cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = appointment.Id, version = "1.0" }, AppointmentResponse.From(appointment));
+        return CreatedAtAction(nameof(Get), new { id = appointment.Id, version = "1" }, AppointmentResponse.From(appointment));
     }
 
     [HttpPost("{id:int}/confirm")]

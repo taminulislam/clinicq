@@ -1,0 +1,67 @@
+@model ClinicQ.Web.Api.Contracts.PatientRequest
+@*
+    Shared create/edit fields. Rendered with <partial for="Input" /> so field names get the "Input." prefix.
+*@
+@{
+    var genders = new[] { "Female", "Male", "Other", "Unknown" };
+}
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="FirstName" class="form-label">First name</label>
+        <input asp-for="FirstName" class="form-control" />
+        <span asp-validation-for="FirstName"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="LastName" class="form-label">Last name</label>
+        <input asp-for="LastName" class="form-control" />
+        <span asp-validation-for="LastName"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="DateOfBirth" class="form-label">Date of birth</label>
+        <input asp-for="DateOfBirth" type="date" class="form-control" value="@(Model.DateOfBirth == default ? "" : Model.DateOfBirth.ToString("yyyy-MM-dd"))" />
+        <span asp-validation-for="DateOfBirth"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Gender" class="form-label"></label>
+        <select asp-for="Gender" class="form-select">
+            <option value="">Select...</option>
+            @foreach (var g in genders)
+            {
+                <option value="@g">@g</option>
+            }
+        </select>
+        <span asp-validation-for="Gender"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Phone" class="form-label"></label>
+        <input asp-for="Phone" class="form-control" />
+        <span asp-validation-for="Phone"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" type="email" class="form-control" />
+        <span asp-validation-for="Email"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="AddressLine" class="form-label">Address</label>
+        <input asp-for="AddressLine" class="form-control" />
+        <span asp-validation-for="AddressLine"></span>
+    </div>
+    <div class="col-md-5">
+        <label asp-for="City" class="form-label"></label>
+        <input asp-for="City" class="form-control" />
+    </div>
+    <div class="col-md-3">
+        <label asp-for="State" class="form-label"></label>
+        <input asp-for="State" class="form-control" />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="PostalCode" class="form-label">Postal code</label>
+        <input asp-for="PostalCode" class="form-control" />
+    </div>
+    <div class="col-12">
+        <label asp-for="Allergies" class="form-label"></label>
+        <input asp-for="Allergies" class="form-control" placeholder="e.g. Penicillin, latex" />
+        <span asp-validation-for="Allergies"></span>
+    </div>
+</div>

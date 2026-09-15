@@ -47,7 +47,7 @@ public sealed class PatientsController : ApiControllerBase
         var patient = new Patient { Mrn = await _patients.NextMrnAsync(cancellationToken), CreatedAt = _clock.Now };
         request.ApplyTo(patient);
         await _patients.CreateAsync(patient, cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = patient.Id, version = "1.0" }, PatientResponse.From(patient));
+        return CreatedAtAction(nameof(Get), new { id = patient.Id, version = "1" }, PatientResponse.From(patient));
     }
 
     [HttpPut("{id:int}")]

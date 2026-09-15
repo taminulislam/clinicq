@@ -1,22 +1,63 @@
 html {
-  font-size: 14px;
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+    html {
+        font-size: 15px;
+    }
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+    background-color: #f5f7fa;
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color: #fff;
+}
+
+.card {
+    border: 0;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+}
+
+.kpi-value {
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.kpi-label {
+    color: #6c757d;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.utilization-bar {
+    height: 0.6rem;
+}
+
+.slot-grid .btn {
+    min-width: 5.5rem;
+}
+
+table.dataTable td {
+    vertical-align: middle;
+}
+
+.field-validation-error,
+.validation-summary-errors {
+    color: #dc3545;
+    font-size: 0.875rem;
+}
+
+.input-validation-error {
+    border-color: #dc3545;
 }

@@ -1,0 +1,23 @@
+@page
+@model ClinicQ.Web.Pages.Patients.CreateModel
+@{
+    ViewData["Title"] = "Register patient";
+}
+
+<h1 class="h3 mb-3">Register patient</h1>
+
+<form method="post" class="card" style="max-width: 60rem;">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+        <partial name="_PatientForm" for="Input" />
+        <p class="small text-muted mt-3 mb-0">A medical record number (MRN) is assigned automatically.</p>
+    </div>
+    <div class="card-footer bg-white d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Register</button>
+        <a asp-page="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

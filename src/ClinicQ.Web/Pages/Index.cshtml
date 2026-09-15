@@ -1,10 +1,75 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Today";
+    var returnUrl = $"/?branchId={Model.BranchId}";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h1 class="h3 mb-0">Today's queue</h1>
+        <div class="text-muted">@Model.Today.ToString("dddd d MMMM yyyy")</div>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="get" class="d-flex gap-2">
+            <select name="branchId" class="form-select" onchange="this.form.submit()">
+                @foreach (var b in Model.Branches)
+                {
+                    <option value="@b.Id" selected="@(b.Id == Model.BranchId)">@b.Name</option>
+                }
+            </select>
+        </form>
+        <a asp-page="/Appointments/Create" asp-route-branchId="@Model.BranchId" class="btn btn-primary text-nowrap"><i class="bi bi-plus-lg"></i> Book</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    @foreach (var (status, label) in new[] { (AppointmentStatus.Confirmed, "Expected"), (AppointmentStatus.CheckedIn, "Waiting"), (AppointmentStatus.InConsultation, "With doctor"), (AppointmentStatus.Completed, "Seen"), (AppointmentStatus.NoShow, "No-show") })
+    {
+        <div class="col-6 col-md">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="kpi-label">@label</div>
+                    <div class="kpi-value">@Model.Count(status)</div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="card">
+    <div class="card-body">
+        @if (Model.Queue.Count == 0)
+        {
+            <p class="text-muted mb-0">No appointments today at this branch.</p>
+        }
+        else
+        {
+            <table class="table table-hover js-datatable" data-page-length="50" data-order='[[0,"asc"]]'>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Patient</th>
+                        <th>Doctor</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in Model.Queue)
+                    {
+                        <tr>
+                            <td data-order="@a.ScheduledStart.ToString("s")">@a.ScheduledStart.ToString("HH:mm")</td>
+                            <td><a asp-page="/Patients/Details" asp-route-id="@a.PatientId">@a.PatientName</a> <span class="text-muted small">@a.PatientMrn</span></td>
+                            <td>@a.DoctorName</td>
+                            <td>@a.Reason</td>
+                            <td><a asp-page="/Appointments/Details" asp-route-id="@a.Id" class="badge @Badges.For(a.Status) text-decoration-none">@Badges.Label(a.Status)</a></td>
+                            <td class="text-end"><partial name="_AppointmentActions" model="new AppointmentActionsModel(a.Id, a.Status, returnUrl)" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
 </div>

@@ -64,9 +64,10 @@ public sealed class LabReportService
             throw new DomainException($"The file exceeds the maximum size of {_options.MaxUploadBytes / (1024 * 1024)} MB.");
         }
 
-        if (!_options.AllowedContentTypes.Contains(upload.ContentType, StringComparer.OrdinalIgnoreCase))
+        var allowed = _options.EffectiveContentTypes;
+        if (!allowed.Contains(upload.ContentType, StringComparer.OrdinalIgnoreCase))
         {
-            throw new DomainException($"Content type '{upload.ContentType}' is not allowed. Allowed: {string.Join(", ", _options.AllowedContentTypes)}.");
+            throw new DomainException($"Content type '{upload.ContentType}' is not allowed. Allowed: {string.Join(", ", allowed)}.");
         }
 
         var stored = await _storage.SaveAsync(Container, upload.FileName, upload.Content, upload.ContentType, cancellationToken);

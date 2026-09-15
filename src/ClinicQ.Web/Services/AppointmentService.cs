@@ -123,6 +123,36 @@ public sealed class AppointmentService
     public Task<Appointment> MarkNoShowAsync(int id, CancellationToken ct = default)
         => TransitionAsync(id, a => a.MarkNoShow(_clock.Now), ct);
 
+    /// <summary>
+    /// Moves an appointment to <paramref name="target"/> via the matching guarded domain method.
+    /// <paramref name="text"/> is the cancellation reason or the completion notes.
+    /// </summary>
+    public Task<Appointment> MoveToAsync(int id, AppointmentStatus target, string? text, CancellationToken ct = default) => target switch
+    {
+        AppointmentStatus.Confirmed => ConfirmAsync(id, ct),
+        AppointmentStatus.CheckedIn => CheckInAsync(id, ct),
+        AppointmentStatus.InConsultation => StartConsultationAsync(id, ct),
+        AppointmentStatus.Completed => CompleteAsync(id, text, ct),
+        AppointmentStatus.Cancelled => CancelAsync(id, text ?? string.Empty, ct),
+        AppointmentStatus.NoShow => MarkNoShowAsync(id, ct),
+        _ => throw new DomainException($"Appointments cannot be moved back to '{target}'.")
+    };
+
+    /// <summary>Updates the free-text fields. Terminal appointments are read-only.</summary>
+    public async Task<Appointment> UpdateDetailsAsync(int id, string reason, string? notes, CancellationToken cancellationToken = default)
+    {
+        var appointment = await GetRequiredAsync(id, cancellationToken);
+        if (AppointmentStateMachine.IsTerminal(appointment.Status))
+        {
+            throw new DomainException($"A {appointment.Status} appointment can no longer be edited.");
+        }
+
+        appointment.Reason = reason.Trim();
+        appointment.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        await _appointments.UpdateAsync(appointment, cancellationToken);
+        return appointment;
+    }
+
     public async Task<Appointment> GetRequiredAsync(int id, CancellationToken cancellationToken = default)
         => await _appointments.GetByIdAsync(id, cancellationToken) ?? throw new EntityNotFoundException("Appointment", id);
 

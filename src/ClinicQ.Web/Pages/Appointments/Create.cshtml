@@ -1,0 +1,118 @@
+@page
+@model ClinicQ.Web.Pages.Appointments.CreateModel
+@{
+    ViewData["Title"] = "Book appointment";
+}
+
+<h1 class="h3 mb-3">Book appointment</h1>
+
+<form method="post" class="card">
+    <div class="card-body">
+        <div asp-validation-summary="All" class="alert alert-danger py-2"></div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Input.PatientId" class="form-label">Patient</label>
+                <select asp-for="Input.PatientId" class="form-select">
+                    <option value="0">Select a patient...</option>
+                    @foreach (var p in Model.Patients)
+                    {
+                        <option value="@p.Id">@p.LastName, @p.FirstName (@p.Mrn)</option>
+                    }
+                </select>
+                <span asp-validation-for="Input.PatientId"></span>
+                <div class="form-text"><a asp-page="/Patients/Create">Register a new patient</a></div>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Input.BranchId" class="form-label">Branch</label>
+                <select asp-for="Input.BranchId" class="form-select" id="branch">
+                    @foreach (var b in Model.Branches)
+                    {
+                        <option value="@b.Id">@b.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Input.DoctorId" class="form-label">Doctor</label>
+                <select asp-for="Input.DoctorId" class="form-select" id="doctor" data-selected="@Model.Input.DoctorId"></select>
+                <span asp-validation-for="Input.DoctorId"></span>
+            </div>
+            <div class="col-md-6">
+                <label for="date" class="form-label">Date</label>
+                <input type="date" id="date" class="form-control" value="@Model.Today.AddDays(1).ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-12">
+                <label class="form-label">Available slots</label>
+                <div id="slots" class="slot-grid d-flex flex-wrap gap-2"><span class="text-muted">Choose a doctor and date.</span></div>
+                <input type="hidden" asp-for="Input.Start" id="start" />
+                <span asp-validation-for="Input.Start"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Input.Reason" class="form-label">Reason for visit</label>
+                <input asp-for="Input.Reason" class="form-control" maxlength="300" />
+                <span asp-validation-for="Input.Reason"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Input.Notes" class="form-label">Notes</label>
+                <input asp-for="Input.Notes" class="form-control" />
+                <span asp-validation-for="Input.Notes"></span>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer bg-white d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Request appointment</button>
+        <a asp-page="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(function () {
+            var $branch = $('#branch'), $doctor = $('#doctor'), $date = $('#date'), $slots = $('#slots'), $start = $('#start');
+
+            function loadDoctors() {
+                $.getJSON('?handler=Doctors', { branchId: $branch.val() }, function (doctors) {
+                    var selected = String($doctor.data('selected') || '');
+                    $doctor.empty().append($('<option>', { value: 0, text: 'Select a doctor...' }));
+                    $.each(doctors, function (_, d) {
+                        $doctor.append($('<option>', { value: d.id, text: d.fullName + ' - ' + d.specialty, selected: String(d.id) === selected }));
+                    });
+                    loadSlots();
+                });
+            }
+
+            function loadSlots() {
+                $start.val('');
+                if (!$doctor.val() || $doctor.val() === '0') {
+                    $slots.html('<span class="text-muted">Choose a doctor and date.</span>');
+                    return;
+                }
+                $slots.html('<span class="text-muted">Loading...</span>');
+                $.getJSON('?handler=Slots', { branchId: $branch.val(), doctorId: $doctor.val(), date: $date.val() }, function (slots) {
+                    $slots.empty();
+                    if (!slots.length) {
+                        $slots.html('<span class="text-muted">No bookable slots on this day (closed, outside the booking window, or lead time not met).</span>');
+                        return;
+                    }
+                    $.each(slots, function (_, s) {
+                        $('<button>', {
+                            type: 'button',
+                            'class': 'btn btn-sm ' + (s.isAvailable ? 'btn-outline-success' : 'btn-outline-secondary'),
+                            text: s.label + (s.isAvailable ? '' : ' (full)'),
+                            disabled: !s.isAvailable
+                        }).on('click', function () {
+                            $slots.find('.btn').removeClass('active');
+                            $(this).addClass('active');
+                            $start.val(s.start);
+                        }).appendTo($slots);
+                    });
+                });
+            }
+
+            $branch.on('change', function () { $doctor.data('selected', ''); loadDoctors(); });
+            $doctor.on('change', loadSlots);
+            $date.on('change', loadSlots);
+            loadDoctors();
+        });
+    </script>
+}

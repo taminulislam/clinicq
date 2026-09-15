@@ -1,0 +1,55 @@
+@page
+@model ClinicQ.Web.Pages.Prescriptions.CreateModel
+@{
+    ViewData["Title"] = "Write prescription";
+}
+
+<h1 class="h3 mb-1">Write prescription</h1>
+<p class="text-muted">
+    @Model.Patient.FullName (@Model.Patient.Mrn) - <a asp-page="/Appointments/Details" asp-route-id="@Model.Appointment.Id">visit #@Model.Appointment.Id</a>
+    @if (!string.IsNullOrWhiteSpace(Model.Patient.Allergies))
+    {
+        <span class="badge text-bg-danger ms-2">Allergies: @Model.Patient.Allergies</span>
+    }
+</p>
+
+@if (!Model.CanPrescribe)
+{
+    <div class="alert alert-warning">Prescriptions can only be issued once the consultation has started.</div>
+}
+
+<form method="post" asp-route-appointmentId="@Model.Appointment.Id" class="card">
+    <div class="card-body">
+        <div asp-validation-summary="All" class="alert alert-danger py-2"></div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label asp-for="Input.Diagnosis" class="form-label">Diagnosis</label>
+                <input asp-for="Input.Diagnosis" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Input.Instructions" class="form-label">Instructions</label>
+                <input asp-for="Input.Instructions" class="form-control" />
+            </div>
+        </div>
+        <table class="table table-sm align-middle">
+            <thead><tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th style="width: 7rem;">Days</th><th>Notes</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Input.Items.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Input.Items[i].Medication" class="form-control form-control-sm" data-val="false" /></td>
+                        <td><input asp-for="Input.Items[i].Dosage" class="form-control form-control-sm" data-val="false" placeholder="500 mg" /></td>
+                        <td><input asp-for="Input.Items[i].Frequency" class="form-control form-control-sm" data-val="false" placeholder="Twice daily" /></td>
+                        <td><input asp-for="Input.Items[i].DurationDays" class="form-control form-control-sm" data-val="false" min="0" max="365" /></td>
+                        <td><input asp-for="Input.Items[i].Notes" class="form-control form-control-sm" data-val="false" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="small text-muted mb-0">Leave unused rows blank.</p>
+    </div>
+    <div class="card-footer bg-white d-flex gap-2">
+        <button type="submit" class="btn btn-primary" disabled="@(!Model.CanPrescribe)">Issue prescription</button>
+        <a asp-page="/Appointments/Details" asp-route-id="@Model.Appointment.Id" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>

@@ -1,0 +1,56 @@
+@page
+@model ClinicQ.Web.Pages.Invoices.IndexModel
+@{
+    ViewData["Title"] = "Invoices";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h1 class="h3 mb-0">Invoices</h1>
+    <form method="get" class="d-flex gap-2">
+        <select asp-for="BranchId" class="form-select">
+            <option value="">All branches</option>
+            @foreach (var b in Model.Branches)
+            {
+                <option value="@b.Id">@b.Name</option>
+            }
+        </select>
+        <select asp-for="Status" asp-items="Html.GetEnumSelectList<InvoiceStatus>()" class="form-select">
+            <option value="">Any status</option>
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4"><div class="card"><div class="card-body"><div class="kpi-label">Invoices</div><div class="kpi-value">@Model.Invoices.Count</div></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body"><div class="kpi-label">Invoiced</div><div class="kpi-value">@Model.TotalInvoiced.ToString("C0")</div></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body"><div class="kpi-label">Outstanding</div><div class="kpi-value text-danger">@Model.TotalOutstanding.ToString("C0")</div></div></div></div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover js-datatable" data-order='[[1,"desc"]]'>
+            <thead>
+                <tr><th>Invoice</th><th>Issued</th><th>Patient</th><th>Branch</th><th class="text-end">Total</th><th class="text-end">Balance</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var i in Model.Invoices)
+                {
+                    <tr>
+                        <td><a asp-page="Details" asp-route-id="@i.Id">@i.InvoiceNumber</a></td>
+                        <td data-order="@i.IssuedAt.ToString("s")">@i.IssuedAt.ToString("d MMM yyyy")</td>
+                        <td><a asp-page="/Patients/Details" asp-route-id="@i.PatientId">@i.PatientName</a></td>
+                        <td>@i.BranchName</td>
+                        <td class="text-end" data-order="@i.Total">@i.Total.ToString("C2")</td>
+                        <td class="text-end" data-order="@i.Balance">@i.Balance.ToString("C2")</td>
+                        <td><span class="badge @Badges.For(i.Status)">@Badges.Label(i.Status)</span></td>
+                        <td class="text-end text-nowrap">
+                            <a asp-page="Details" asp-route-id="@i.Id" class="btn btn-sm btn-outline-secondary">Open</a>
+                            <a asp-page="Details" asp-route-id="@i.Id" asp-page-handler="Pdf" class="btn btn-sm btn-outline-secondary">PDF</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

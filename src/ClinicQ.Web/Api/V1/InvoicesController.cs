@@ -46,7 +46,7 @@ public sealed class InvoicesController : ApiControllerBase
     {
         var services = request.Services.Select(s => new ServiceLineRequest(s.ServiceCode, s.Quantity)).ToList();
         var invoice = await _billing.GenerateInvoiceAsync(request.AppointmentId, services, request.DiscountPercent, cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = invoice.Id, version = "1.0" }, InvoiceResponse.From(invoice));
+        return CreatedAtAction(nameof(Get), new { id = invoice.Id, version = "1" }, InvoiceResponse.From(invoice));
     }
 
     [HttpPost("{id:int}/payments")]

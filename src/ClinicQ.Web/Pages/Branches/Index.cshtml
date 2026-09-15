@@ -1,0 +1,43 @@
+@page
+@model ClinicQ.Web.Pages.Branches.IndexModel
+@using ClinicQ.Domain.Scheduling
+@{
+    ViewData["Title"] = "Branches";
+}
+
+<h1 class="h3 mb-3">Branches</h1>
+
+<div class="row g-3">
+    @foreach (var row in Model.Rows)
+    {
+        var b = row.Branch;
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-1">@b.Name <span class="badge text-bg-light border">@b.Code</span></h2>
+                    <div class="text-muted small mb-3">@b.AddressLine, @b.City @b.State @b.PostalCode &middot; @b.Phone</div>
+                    @if (row.Rule is not null)
+                    {
+                        <dl class="row small mb-0">
+                            <dt class="col-6">Hours</dt><dd class="col-6">@row.Rule.OpenTime.ToString("HH:mm") - @row.Rule.CloseTime.ToString("HH:mm")</dd>
+                            <dt class="col-6">Days</dt><dd class="col-6">@WorkingDays.Describe(row.Rule.WorkingDaysMask)</dd>
+                            <dt class="col-6">Slot length</dt><dd class="col-6">@row.Rule.SlotDurationMinutes min</dd>
+                            <dt class="col-6">Bookings per slot</dt><dd class="col-6">@row.Rule.MaxBookingsPerSlot</dd>
+                            <dt class="col-6">Lead time</dt><dd class="col-6">@row.Rule.MinLeadTimeHours h</dd>
+                            <dt class="col-6">Book ahead</dt><dd class="col-6">@row.Rule.MaxAdvanceDays days</dd>
+                            <dt class="col-6">Tax rate</dt><dd class="col-6">@b.TaxRatePercent.ToString("0.##")%</dd>
+                            <dt class="col-6">Doctors</dt><dd class="col-6">@row.DoctorCount</dd>
+                        </dl>
+                    }
+                    else
+                    {
+                        <p class="text-warning small">No slot rule configured.</p>
+                    }
+                </div>
+                <div class="card-footer bg-white">
+                    <a asp-page="Details" asp-route-id="@b.Id" class="btn btn-sm btn-outline-primary">Slot rules &amp; fee schedule</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,90 @@
+@page
+@model ClinicQ.Web.Pages.Appointments.IndexModel
+@{
+    ViewData["Title"] = "Appointments";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Appointments</h1>
+    <a asp-page="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Book appointment</a>
+</div>
+
+<form method="get" class="card mb-3">
+    <div class="card-body row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small mb-0" for="BranchId">Branch</label>
+            <select asp-for="BranchId" class="form-select">
+                <option value="">All branches</option>
+                @foreach (var b in Model.Branches)
+                {
+                    <option value="@b.Id">@b.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-0" for="DoctorId">Doctor</label>
+            <select asp-for="DoctorId" class="form-select">
+                <option value="">All doctors</option>
+                @foreach (var d in Model.Doctors)
+                {
+                    <option value="@d.Id">@d.FullName</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-0" for="Status">Status</label>
+            <select asp-for="Status" asp-items="Html.GetEnumSelectList<AppointmentStatus>()" class="form-select">
+                <option value="">Any status</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-0" for="From">From</label>
+            <input asp-for="From" type="date" class="form-control" value="@Model.From?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-0" for="To">To</label>
+            <input asp-for="To" type="date" class="form-control" value="@Model.To?.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-1 d-grid">
+            <button type="submit" class="btn btn-outline-primary">Filter</button>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover js-datatable" data-order='[[0,"desc"]]'>
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Patient</th>
+                    <th>Doctor</th>
+                    <th>Branch</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Model.Items)
+                {
+                    <tr>
+                        <td data-order="@a.ScheduledStart.ToString("s")">@a.ScheduledStart.ToString("ddd d MMM yyyy HH:mm")</td>
+                        <td><a asp-page="/Patients/Details" asp-route-id="@a.PatientId">@a.PatientName</a></td>
+                        <td>@a.DoctorName</td>
+                        <td>@a.BranchName</td>
+                        <td>@a.Reason</td>
+                        <td><span class="badge @Badges.For(a.Status)">@Badges.Label(a.Status)</span></td>
+                        <td class="text-end text-nowrap">
+                            <a asp-page="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-secondary">Open</a>
+                            @if (!AppointmentStateMachine.IsTerminal(a.Status))
+                            {
+                                <a asp-page="Edit" asp-route-id="@a.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

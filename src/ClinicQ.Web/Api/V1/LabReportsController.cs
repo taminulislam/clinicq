@@ -52,14 +52,14 @@ public sealed class LabReportsController : ApiControllerBase
             form.PatientId, form.AppointmentId, form.TestName, form.Notes,
             form.File.FileName, form.File.ContentType, form.File.Length, stream, CurrentUserName), cancellationToken);
 
-        return CreatedAtAction(nameof(Get), new { id = report.Id, version = "1.0" }, LabReportResponse.From(report));
+        return CreatedAtAction(nameof(Get), new { id = report.Id, version = "1" }, LabReportResponse.From(report));
     }
 
     /// <summary>Time-limited download link: a SAS URL on Azure Blob Storage, or the API download route on local disk.</summary>
     [HttpGet("{id:int}/download-link")]
     public async Task<ActionResult<DownloadLinkResponse>> DownloadLink(int id, CancellationToken cancellationToken)
     {
-        var fallback = Url.ActionLink(nameof(Download), values: new { id, version = "1.0" }) ?? $"/api/v1/lab-reports/{id}/download";
+        var fallback = Url.ActionLink(nameof(Download), values: new { id, version = "1" }) ?? $"/api/v1/lab-reports/{id}/download";
         var link = await _service.GetDownloadLinkAsync(id, fallback, cancellationToken);
         return Ok(new DownloadLinkResponse(id, link.Url, link.ExpiresAt, _storage.ProviderName));
     }

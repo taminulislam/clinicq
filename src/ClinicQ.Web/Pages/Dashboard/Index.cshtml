@@ -1,0 +1,118 @@
+@page
+@model ClinicQ.Web.Pages.Dashboard.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Dashboard";
+    var m = Model.Metrics;
+    var revenueLabels = JsonSerializer.Serialize(m.Revenue.Select(r => r.BranchName));
+    var revenueInvoiced = JsonSerializer.Serialize(m.Revenue.Select(r => r.TotalInvoiced));
+    var revenueCollected = JsonSerializer.Serialize(m.Revenue.Select(r => r.TotalCollected));
+    var waitLabels = JsonSerializer.Serialize(m.WaitTimes.Select(w => w.BranchName));
+    var waitValues = JsonSerializer.Serialize(m.WaitTimes.Select(w => w.AverageWaitMinutes));
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <div class="text-muted">@Model.From?.ToString("d MMM yyyy") - @Model.To?.ToString("d MMM yyyy")</div>
+    </div>
+    <form method="get" class="d-flex gap-2">
+        <input asp-for="From" type="date" class="form-control" value="@Model.From?.ToString("yyyy-MM-dd")" />
+        <input asp-for="To" type="date" class="form-control" value="@Model.To?.ToString("yyyy-MM-dd")" />
+        <button type="submit" class="btn btn-outline-primary">Apply</button>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="kpi-label">Completed visits</div><div class="kpi-value">@Model.TotalVisits</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="kpi-label">Average wait</div><div class="kpi-value">@m.OverallAverageWaitMinutes.ToString("0.#") <span class="fs-6 text-muted">min</span></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="kpi-label">Revenue collected</div><div class="kpi-value">@Model.Revenue.ToString("C0")</div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="kpi-label">No-show rate</div><div class="kpi-value">@Model.NoShowRate.ToString("0.#")%</div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header bg-white fw-semibold">Revenue per branch</div>
+            <div class="card-body"><canvas id="revenueChart" height="140"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header bg-white fw-semibold">Average wait time (check-in to consultation)</div>
+            <div class="card-body"><canvas id="waitChart" height="180"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header bg-white fw-semibold">Doctor utilization</div>
+    <div class="card-body">
+        <table class="table table-hover js-datatable" data-order='[[4,"desc"]]' data-page-length="25">
+            <thead>
+                <tr><th>Doctor</th><th>Specialty</th><th>Branch</th><th class="text-end">Booked / slots</th><th style="width: 25%;">Utilization</th><th class="text-end">Completed</th><th class="text-end">No-shows</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var d in m.DoctorUtilization)
+                {
+                    var barClass = d.UtilizationPercent >= 85 ? "bg-danger" : d.UtilizationPercent >= 60 ? "bg-success" : "bg-warning";
+                    <tr>
+                        <td>@d.DoctorName</td>
+                        <td>@d.Specialty</td>
+                        <td>@d.BranchName</td>
+                        <td class="text-end">@d.Scheduled / @d.Capacity</td>
+                        <td data-order="@d.UtilizationPercent">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1 utilization-bar" role="progressbar" aria-valuenow="@d.UtilizationPercent" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar @barClass" style="width: @(Math.Min(100, d.UtilizationPercent).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                </div>
+                                <span class="small text-nowrap">@d.UtilizationPercent.ToString("0.#")%</span>
+                            </div>
+                        </td>
+                        <td class="text-end">@d.Completed</td>
+                        <td class="text-end">@d.NoShows</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white fw-semibold">Revenue detail</div>
+    <div class="card-body">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>Branch</th><th class="text-end">Invoices</th><th class="text-end">Invoiced</th><th class="text-end">Collected</th><th class="text-end">Outstanding</th></tr></thead>
+            <tbody>
+                @foreach (var r in m.Revenue)
+                {
+                    <tr><td>@r.BranchName</td><td class="text-end">@r.InvoiceCount</td><td class="text-end">@r.TotalInvoiced.ToString("C2")</td><td class="text-end">@r.TotalCollected.ToString("C2")</td><td class="text-end">@r.Outstanding.ToString("C2")</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            new Chart(document.getElementById('revenueChart'), {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(revenueLabels),
+                    datasets: [
+                        { label: 'Invoiced', data: @Html.Raw(revenueInvoiced), backgroundColor: '#9ec5fe' },
+                        { label: 'Collected', data: @Html.Raw(revenueCollected), backgroundColor: '#0d6efd' }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return '$' + v.toLocaleString(); } } } } }
+            });
+            new Chart(document.getElementById('waitChart'), {
+                type: 'bar',
+                data: { labels: @Html.Raw(waitLabels), datasets: [{ label: 'Minutes', data: @Html.Raw(waitValues), backgroundColor: '#20c997' }] },
+                options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+            });
+        })();
+    </script>
+}

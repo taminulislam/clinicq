@@ -1,0 +1,106 @@
+@page "{id:int}"
+@model ClinicQ.Web.Pages.Invoices.DetailsModel
+@{
+    var inv = Model.Invoice;
+    ViewData["Title"] = inv.InvoiceNumber;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+    <div>
+        <h1 class="h3 mb-1">@inv.InvoiceNumber <span class="badge @Badges.For(inv.Status) align-middle fs-6">@Badges.Label(inv.Status)</span></h1>
+        <div class="text-muted">
+            <a asp-page="/Patients/Details" asp-route-id="@Model.Patient.Id">@Model.Patient.FullName</a> &middot; @Model.Branch.Name &middot;
+            <a asp-page="/Appointments/Details" asp-route-id="@inv.AppointmentId">visit #@inv.AppointmentId</a> &middot;
+            issued @inv.IssuedAt.ToString("d MMM yyyy"), due @inv.DueDate.ToString("d MMM yyyy")
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page-handler="Pdf" asp-route-id="@inv.Id" class="btn btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        @if (Model.CanVoid)
+        {
+            <form method="post" asp-page-handler="Void" asp-route-id="@inv.Id" data-confirm="Void this invoice? This cannot be undone.">
+                <button type="submit" class="btn btn-outline-danger">Void</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>Code</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                        @foreach (var l in inv.Lines)
+                        {
+                            <tr><td>@l.ServiceCode</td><td>@l.Description</td><td class="text-end">@l.Quantity</td><td class="text-end">@l.UnitPrice.ToString("C2")</td><td class="text-end">@l.LineTotal.ToString("C2")</td></tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><td colspan="4" class="text-end">Subtotal</td><td class="text-end">@inv.Subtotal.ToString("C2")</td></tr>
+                        @if (inv.DiscountAmount > 0)
+                        {
+                            <tr><td colspan="4" class="text-end">Discount (@inv.DiscountPercent.ToString("0.##")%)</td><td class="text-end">-@inv.DiscountAmount.ToString("C2")</td></tr>
+                        }
+                        <tr><td colspan="4" class="text-end">Tax (@inv.TaxRatePercent.ToString("0.##")%)</td><td class="text-end">@inv.TaxAmount.ToString("C2")</td></tr>
+                        <tr class="fw-semibold"><td colspan="4" class="text-end">Total</td><td class="text-end">@inv.Total.ToString("C2")</td></tr>
+                        <tr><td colspan="4" class="text-end">Paid</td><td class="text-end">@inv.AmountPaid.ToString("C2")</td></tr>
+                        <tr class="fw-semibold @(inv.Balance > 0 ? "text-danger" : "text-success")"><td colspan="4" class="text-end">Balance</td><td class="text-end">@inv.Balance.ToString("C2")</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        @if (Model.CanTakePayment)
+        {
+            <form method="post" asp-page-handler="Payment" asp-route-id="@inv.Id" class="card mb-3">
+                <div class="card-header bg-white fw-semibold">Record payment</div>
+                <div class="card-body">
+                    <div asp-validation-summary="All" class="text-danger small"></div>
+                    <div class="mb-2">
+                        <label asp-for="Payment.Amount" class="form-label">Amount</label>
+                        <input asp-for="Payment.Amount" class="form-control" step="0.01" min="0.01" max="@inv.Balance" />
+                        <span asp-validation-for="Payment.Amount"></span>
+                    </div>
+                    <div class="mb-2">
+                        <label asp-for="Payment.Method" class="form-label">Method</label>
+                        <select asp-for="Payment.Method" class="form-select">
+                            @foreach (var m in Enum.GetNames<PaymentMethod>())
+                            {
+                                <option value="@m">@m</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Payment.Reference" class="form-label">Reference</label>
+                        <input asp-for="Payment.Reference" class="form-control" placeholder="Receipt / claim number" />
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Record payment</button>
+                </div>
+            </form>
+        }
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">Payments</div>
+            <ul class="list-group list-group-flush small">
+                @foreach (var p in Model.Payments)
+                {
+                    <li class="list-group-item">
+                        <strong>@p.Amount.ToString("C2")</strong> @p.Method
+                        <span class="float-end text-muted">@p.PaidAt.ToString("d MMM yyyy HH:mm")</span><br />
+                        <span class="text-muted">@p.Reference - received by @p.ReceivedBy</span>
+                    </li>
+                }
+                @if (Model.Payments.Count == 0)
+                {
+                    <li class="list-group-item text-muted">No payments recorded.</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

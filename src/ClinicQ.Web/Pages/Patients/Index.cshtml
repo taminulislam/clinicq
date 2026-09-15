@@ -1,0 +1,45 @@
+@page
+@model ClinicQ.Web.Pages.Patients.IndexModel
+@{
+    ViewData["Title"] = "Patients";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Patients</h1>
+    <a asp-page="Create" class="btn btn-primary"><i class="bi bi-person-plus"></i> Register patient</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover js-datatable" data-order='[[1,"asc"]]'>
+            <thead>
+                <tr>
+                    <th>MRN</th>
+                    <th>Name</th>
+                    <th>Date of birth</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>City</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.Patients)
+                {
+                    <tr>
+                        <td>@p.Mrn</td>
+                        <td data-order="@p.LastName @p.FirstName"><a asp-page="Details" asp-route-id="@p.Id">@p.LastName, @p.FirstName</a></td>
+                        <td data-order="@p.DateOfBirth.ToString("s")">@p.DateOfBirth.ToString("d MMM yyyy")</td>
+                        <td>@p.Phone</td>
+                        <td>@p.Email</td>
+                        <td>@p.City</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-page="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Open</a>
+                            <a asp-page="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

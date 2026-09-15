@@ -27,7 +27,7 @@ public sealed class PrescriptionsController : ApiControllerBase
     {
         var items = request.Items.Select(i => new PrescriptionItemRequest(i.Medication, i.Dosage, i.Frequency, i.DurationDays, i.Notes)).ToList();
         var prescription = await _service.CreateAsync(new PrescriptionRequest(request.AppointmentId, request.Diagnosis, request.Instructions, items), cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = prescription.Id, version = "1.0" }, PrescriptionResponse.From(prescription));
+        return CreatedAtAction(nameof(Get), new { id = prescription.Id, version = "1" }, PrescriptionResponse.From(prescription));
     }
 
     /// <summary>Prescription as a PDF document (QuestPDF).</summary>

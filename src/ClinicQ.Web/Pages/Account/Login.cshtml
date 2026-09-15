@@ -1,0 +1,51 @@
+@page
+@model ClinicQ.Web.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-1">Sign in to ClinicQ</h1>
+                <p class="text-muted small mb-4">Clinic appointments and patient records</p>
+
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div class="mb-3">
+                        <label asp-for="Input.Username" class="form-label"></label>
+                        <input asp-for="Input.Username" class="form-control" autocomplete="username" autofocus />
+                        <span asp-validation-for="Input.Username"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Input.Password" class="form-label"></label>
+                        <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
+                        <span asp-validation-for="Input.Password"></span>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input asp-for="Input.RememberMe" class="form-check-input" />
+                        <label asp-for="Input.RememberMe" class="form-check-label"></label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Sign in</button>
+                </form>
+            </div>
+        </div>
+        <div class="card mt-3">
+            <div class="card-body small">
+                <strong>Demo accounts</strong> (password <code>Passw0rd!</code>)
+                <ul class="mb-0 mt-1">
+                    <li><code>admin</code> - administrator (all features, Hangfire dashboard)</li>
+                    <li><code>reception</code> - front desk, Springfield</li>
+                    <li><code>drpatel</code> - doctor, Springfield</li>
+                    <li><code>billing</code> - billing office</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
