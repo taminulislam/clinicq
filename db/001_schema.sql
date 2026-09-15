@@ -154,10 +154,11 @@ BEGIN
         AmountPaid      DECIMAL(10,2) NOT NULL CONSTRAINT DF_Invoices_Paid DEFAULT (0),
         IssuedAt        DATETIME2(3)  NOT NULL,
         DueDate         DATETIME2(0)  NOT NULL,
-        PaidAt          DATETIME2(3)  NULL,
-        CONSTRAINT UQ_Invoices_Appointment UNIQUE (AppointmentId)
+        PaidAt          DATETIME2(3)  NULL
     );
     CREATE INDEX IX_Invoices_Branch_Issued ON dbo.Invoices(BranchId, IssuedAt) INCLUDE (Status, Total, AmountPaid);
+    /* A visit may hold only one live invoice; voiding it allows a corrected invoice to be issued. */
+    CREATE UNIQUE INDEX UX_Invoices_Appointment_Active ON dbo.Invoices(AppointmentId) WHERE Status <> 'Void';
 END
 GO
 

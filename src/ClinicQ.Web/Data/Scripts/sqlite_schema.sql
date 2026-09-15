@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS Invoices
 (
     Id              INTEGER PRIMARY KEY AUTOINCREMENT,
     InvoiceNumber   TEXT    NOT NULL UNIQUE,
-    AppointmentId   INTEGER NOT NULL UNIQUE REFERENCES Appointments(Id),
+    AppointmentId   INTEGER NOT NULL REFERENCES Appointments(Id),
     PatientId       INTEGER NOT NULL REFERENCES Patients(Id),
     BranchId        INTEGER NOT NULL REFERENCES Branches(Id),
     Status          TEXT    NOT NULL CHECK (Status IN ('Draft','Issued','PartiallyPaid','Paid','Void')),
@@ -117,6 +117,8 @@ CREATE TABLE IF NOT EXISTS Invoices
     PaidAt          TEXT    NULL
 );
 CREATE INDEX IF NOT EXISTS IX_Invoices_Branch_Issued ON Invoices(BranchId, IssuedAt);
+-- A visit may hold only one live invoice, but voiding it allows a corrected invoice to be issued.
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Invoices_Appointment_Active ON Invoices(AppointmentId) WHERE Status <> 'Void';
 
 CREATE TABLE IF NOT EXISTS InvoiceLines
 (
