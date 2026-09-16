@@ -12,6 +12,71 @@ can book slots, upload lab reports and pull the operational metrics behind the d
 stored procedures, FluentValidation, Hangfire, Azure Blob Storage, SendGrid, QuestPDF, jQuery,
 Bootstrap, Swagger, JWT and Azure DevOps. The code has since been upgraded to **.NET 8**.
 
+## Live demo
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/taminulislam/clinicq?quickstart=1)
+
+Launch a Codespace, then run:
+
+```bash
+dotnet run --project src/ClinicQ.Web --urls http://localhost:5102
+```
+
+Open the forwarded port **5102** and sign in with **`admin` / `Passw0rd!`** (or `reception`,
+`drpatel`, `billing` - same password). Swagger UI is at `/swagger`.
+
+The demo runs entirely on **SQLite**: the schema is created and roughly 3,000 appointments with
+invoices, payments and prescriptions are seeded on first start, so the dashboard and grids have
+real data immediately. No Azure resources, SQL Server instance or API keys are required - email
+falls back to the log and lab report uploads to local disk.
+
+## Screenshots
+
+### Dashboard
+Doctor utilization against schedulable slots, average wait time from check-in to consultation, and
+revenue per branch, charted with Chart.js.
+
+![Dashboard](docs/screenshots/03-dashboard.png)
+
+### Today's queue
+The front-desk landing page: every appointment at a branch today, with one-click status moves that
+only ever offer the transitions the state machine allows.
+
+![Today's queue](docs/screenshots/02-todays-queue.png)
+
+### Appointments
+Server-filtered grid (branch, doctor, status, date range) rendered with DataTables.
+
+![Appointments](docs/screenshots/04-appointments.png)
+
+### Appointment detail
+A completed visit: the full lifecycle timeline, measured wait time, the prescription issued and the
+invoice it generated.
+
+![Appointment detail](docs/screenshots/05-appointment-detail.png)
+
+### Booking
+Slots come from the branch rule via AJAX - 20-minute slots here, with taken slots disabled and lead
+time and opening hours already applied.
+
+![Booking](docs/screenshots/07-booking.png)
+
+### Patient record
+Demographics and allergies, visit history, prescriptions, lab reports and the outstanding balance.
+
+![Patient record](docs/screenshots/06-patient-record.png)
+
+### Invoice
+Line items priced from the branch fee schedule, discount and tax, recorded payments and the PDF
+export.
+
+![Invoice](docs/screenshots/08-invoice.png)
+
+### Swagger UI
+The versioned REST API with bearer authentication; every appointment lifecycle step is an endpoint.
+
+![Swagger UI](docs/screenshots/09-swagger.png)
+
 ## Architecture
 
 One ASP.NET Core 8 web application serves two faces over one domain and data layer:
@@ -198,19 +263,6 @@ fallback; in Azure they are Key Vault references resolved by the web app's manag
 | `SendGrid:ApiKey` | Emails are written to the log instead of sent |
 | `Storage:AzureBlobConnectionString` | Lab reports are stored under `storage/` on local disk |
 | `Clinic:TimeZoneId` | Falls back to the machine's local time zone |
-
-## Screenshots
-
-Screenshots of the today's queue, booking screen, patient record, invoice and dashboard will be
-added here.
-
-<!--
-![Today's queue](docs/images/today-queue.png)
-![Booking](docs/images/booking.png)
-![Patient record](docs/images/patient-record.png)
-![Invoice](docs/images/invoice.png)
-![Dashboard](docs/images/dashboard.png)
--->
 
 ## License
 

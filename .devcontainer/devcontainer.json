@@ -1,0 +1,22 @@
+{
+  "name": "ClinicQ (.NET 8)",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
+  "forwardPorts": [5102],
+  "portsAttributes": {
+    "5102": {
+      "label": "ClinicQ web (portal + API)",
+      "onAutoForward": "openBrowserOnce"
+    }
+  },
+  "postCreateCommand": "dotnet restore ClinicQ.sln && dotnet build ClinicQ.sln --configuration Debug",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "ClinicQ.sln"
+      }
+    }
+  }
+}

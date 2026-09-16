@@ -58,6 +58,12 @@ table.dataTable td {
     font-size: 0.875rem;
 }
 
+/* A validation summary is always rendered; hide it until it actually holds errors,
+   otherwise every fresh form shows an empty red alert bar. */
+.validation-summary-valid {
+    display: none;
+}
+
 .input-validation-error {
     border-color: #dc3545;
 }
